@@ -88,7 +88,7 @@ mutationModel = function(model, alleles = NULL, afreq = NULL, matrix = NULL,
     rate = validateSingleInput(rate, "numeric")
     rate2 = validateSingleInput(rate2, "numeric")
     range = validateSingleInput(range, "numeric")
-    seed = validateSingleInput(seed, "integer")
+    seed = validateSingleInput(seed, "numeric")
 
     female = mutationMatrix(model = model$female, alleles = alleles,
                             afreq = afreq, matrix = matrix$female,
@@ -186,6 +186,14 @@ print.mutationModel = function(x, ...) {
     print(x$male, ...)
   }
   invisible(x)
+}
+
+#' @export
+toString.mutationModel = function(x, ...) {
+  if(attr(x, "sexEqual"))
+    toString(x$female)
+  else
+    sprintf("%s (male); %s (female)", toString(x$male), toString(x$female))
 }
 
 isMutationModel = function(x) {
