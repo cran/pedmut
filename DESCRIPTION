@@ -1,9 +1,9 @@
 Package: pedmut
 Title: Mutation Models for Pedigree Likelihood Computations
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: person("Magnus Dehli", "Vigeland", email = "m.d.vigeland@medisin.uio.no", 
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9134-4962"))
-Description: A collection of functions for modeling mutations in pedigrees with 
+Description: A collection of functions for modelling mutations in pedigrees with 
     marker data, as used e.g. in likelihood computations with microsatellite data.
     Implemented models include proportional and stepwise models, as well as random 
     models for experimental work, and custom models allowing the user to apply any 
@@ -14,13 +14,12 @@ License: GPL-3
 URL: https://github.com/magnusdv/pedmut
 Encoding: UTF-8
 Language: en-GB
-LazyData: true
 RoxygenNote: 7.1.1
 Suggests: testthat
 NeedsCompilation: no
-Packaged: 2020-07-30 07:10:18 UTC; magnusdv
+Packaged: 2021-10-22 12:35:22 UTC; magnusdv
 Author: Magnus Dehli Vigeland [aut, cre]
     (<https://orcid.org/0000-0002-9134-4962>)
 Maintainer: Magnus Dehli Vigeland <m.d.vigeland@medisin.uio.no>
 Repository: CRAN
-Date/Publication: 2020-07-30 07:30:02 UTC
+Date/Publication: 2021-10-22 13:00:02 UTC
