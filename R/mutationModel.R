@@ -27,8 +27,9 @@
 #'   details.
 #' @param range A positive number, or a list of two (named "female" and "male").
 #'   Required in the "stepwise" model; see [mutationMatrix()] for details.
-#' @param seed An integer, or a list of two (named "female" and "male")
-#' @param mutmod A `mutationModel` object
+#' @param seed An integer, or a list of two (named "female" and "male").
+#' @param validate A logical, by default TRUE.
+#' @param mutmod A `mutationModel` object.
 #'
 #' @return An object of class `mutationModel`. This is a list of two
 #'   `mutationMatrix` objects, named "female" and "male", and the following
@@ -65,7 +66,8 @@
 #'
 #' @export
 mutationModel = function(model, alleles = NULL, afreq = NULL, matrix = NULL,
-                         rate = NULL, rate2 = NULL, range = NULL, seed = NULL) {
+                         rate = NULL, rate2 = NULL, range = NULL, seed = NULL,
+                         validate = TRUE) {
 
   if(isMutationModel(model)) {
     mod = enforceAlleleOrder(model, alleles)
@@ -116,7 +118,10 @@ mutationModel = function(model, alleles = NULL, afreq = NULL, matrix = NULL,
   mutmod = structure(mod, sexEqual = sexEqual, alwaysLumpable = lumpable,
                      class = "mutationModel")
 
-  validateMutationModel(mutmod)
+  if(validate)
+    validateMutationModel(mutmod)
+
+  mutmod
 }
 
 validateSingleInput = function(x, mode) {
@@ -152,10 +157,9 @@ validateMatrixInput = function(x) {
 #' @rdname mutationModel
 #' @export
 validateMutationModel = function(mutmod, alleles = NULL) {
-  stopifnot(is.list(mutmod),
-            length(mutmod) == 2,
-            setequal(names(mutmod), c("male", "female")),
-            inherits(mutmod, "mutationModel"))
+  if(!is.list(mutmod) || length(mutmod) != 2 || !setequal(names(mutmod), c("male", "female"))) {
+    stop2("`mutmod` must be a list with elements 'male' and 'female'")
+  }
 
   male = mutmod$male
   female = mutmod$female
@@ -164,10 +168,20 @@ validateMutationModel = function(mutmod, alleles = NULL) {
     alleles = colnames(male)
 
   validateMutationMatrix(male, alleles = alleles)
-  validateMutationMatrix(female, alleles = alleles)
 
-  stopifnot(identical(attr(mutmod, "sexEqual"), identical(male, female)),
-            identical(attr(male, 'afreq'), attr(female, 'afreq')))
+  sexEq = attr(mutmod, "sexEqual")
+  if(is.null(sexEq))
+    stop2("Mutation model attribute `sexEqual` is not set")
+
+  if(sexEq && !identical(male, female))
+    stop2("Mutation model attribute `sexEqual` is falsely set to TRUE")
+
+  if(!sexEq) {
+    validateMutationMatrix(female, alleles = alleles)
+
+    if(!identical(attr(male, 'afreq'), attr(female, 'afreq')))
+      stop2("Mutation model attribute `afreq` differs for males and females")
+  }
 
   mutmod
 }
@@ -205,24 +219,27 @@ enforceAlleleOrder = function(m, alleles) {
   if(is.null(alleles))
     return(m)
 
-  stopifnot(isMutationModel(m) || isMutationMatrix(m),
-            !anyDuplicated(alleles))
-
   if(isMutationModel(m)) {
     m$male = enforceAlleleOrder(m$male, alleles)
     m$female = enforceAlleleOrder(m$female, alleles)
     return(m)
   }
 
-  stopifnot(setequal(alleles, rownames(m)),
-            setequal(alleles, colnames(m)))
+  if(!isMutationMatrix(m))
+    stop2("Expected a mutation matrix, not a: ", class(m))
 
-  # Just to make sure
+  nms = dimnames(m)
   alleles = as.character(alleles)
 
   # If already correct order - return
-  if(identical(alleles, rownames(m)))
+  if(identical(alleles, nms[[1]]))
     return(m)
+
+  if(!setequal(alleles, nms[[1]]) || !setequal(alleles, nms[[2]]))
+    stop2("Alleles differ from names of mutation matrix")
+
+  if(length(alleles) > length(nms[[1]]))
+    stop2("Duplicated alleles indicated: ", alleles[duplicated[alleles]])
 
   # Permute
   new_m = m[alleles, alleles]

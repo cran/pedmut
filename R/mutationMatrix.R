@@ -233,14 +233,18 @@ newMutationMatrix = function(mutmat, model = "custom", afreq = NULL,
 #' @export
 validateMutationMatrix = function(mutmat, alleles = NULL) {
 
-  stopifnot(is.matrix(mutmat),
-            is.numeric(mutmat),
-            !anyNA(mutmat),
-            nrow(mutmat) == ncol(mutmat),
-            identical(colnames(mutmat), rownames(mutmat)),
-            inherits(mutmat, "mutationMatrix"))
+  dm = dim(mutmat)
+  if(is.null(dm) || dm[1] != dm[2] || !is.numeric(mutmat))
+    stop2("Mutation matrix is not a square numeric matrix")
 
-  als = colnames(mutmat)
+  if(anyNA(mutmat))
+    stop2("Mutation matrix contains NA elements")
+
+  nms = dimnames(mutmat)
+  if(!identical(nms[[1]], nms[[2]]))
+    stop2("Mutation matrix has unequal row and column names")
+
+  als = nms[[1]]
   if(!is.null(alleles) && !identical(als, as.character(alleles)))
     stop2("Dimnames of mutation matrix not consistent with indicated alleles")
 
@@ -260,7 +264,7 @@ validateMutationMatrix = function(mutmat, alleles = NULL) {
   if(any(mutmat > 1))
     stop2("Entries exceeding 1 found in mutation matrix: ", mutmat[mutmat > 1])
 
-  rs = rowSums(mutmat)
+  rs = .rowSums(mutmat, dm[1], dm[1])
   if (any(round(rs, 3) != 1)) {
     print(rowSums(mutmat))
     stop2("Rows which do not sum to 1 (after rounding to 3 decimal places): ",
@@ -332,5 +336,5 @@ toString.mutationMatrix = function(x, ...) {
 }
 
 isMutationMatrix = function(x) {
-  class(x) == "mutationMatrix"
+  inherits(x, "mutationMatrix")
 }

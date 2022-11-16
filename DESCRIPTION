@@ -1,6 +1,6 @@
 Package: pedmut
 Title: Mutation Models for Pedigree Likelihood Computations
-Version: 0.3.0
+Version: 0.4.0
 Authors@R: person("Magnus Dehli", "Vigeland", email = "m.d.vigeland@medisin.uio.no", 
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9134-4962"))
 Description: A collection of functions for modelling mutations in pedigrees with 
@@ -14,12 +14,12 @@ License: GPL-3
 URL: https://github.com/magnusdv/pedmut
 Encoding: UTF-8
 Language: en-GB
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.2
 Suggests: testthat
 NeedsCompilation: no
-Packaged: 2021-10-22 12:35:22 UTC; magnusdv
+Packaged: 2022-11-16 21:56:04 UTC; magnusdv
 Author: Magnus Dehli Vigeland [aut, cre]
     (<https://orcid.org/0000-0002-9134-4962>)
 Maintainer: Magnus Dehli Vigeland <m.d.vigeland@medisin.uio.no>
 Repository: CRAN
-Date/Publication: 2021-10-22 13:00:02 UTC
+Date/Publication: 2022-11-16 22:50:02 UTC
