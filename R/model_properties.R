@@ -3,12 +3,13 @@
 #' Functions for checking various properties of a mutation model, including
 #' stationarity, reversibility and lumpability.
 #'
-#' @param mutmat A mutation matrix
-#' @param afreq A vector with frequency vector, of the same length as the size
-#'   of `mutmat`
+#' @param mutmat A [mutationMatrix()] or a [mutationModel()].
+#' @param afreq A vector with allele frequencies, of the same length as the size
+#'   of `mutmat`.
 #' @param lump A nonempty subset of the colnames of `mutmat` (i.e. the allele
-#'   labels)
-#' @return Each of these functions returns TRUE of FALSE
+#'   labels).
+#'
+#' @return Each of these functions returns TRUE of FALSE.
 #'
 #' @examples
 #'
@@ -34,7 +35,16 @@ NULL
 
 #' @rdname model_properties
 #' @export
-isStationary = function(mutmat, afreq) {
+isStationary = function(mutmat, afreq = NULL) {
+  if(isMutationModel(mutmat)) {
+    isStatF = isStationary(mutmat$female, afreq = afreq)
+    isStatM = sexEqual(mutmat) || isStationary(mutmat$male, afreq = afreq)
+    return(isStatF && isStatM)
+  }
+
+  if(is.null(afreq))
+    afreq = attr(mutmat, "afreq") %||% stop2("Argument `afreq` is missing")
+
   prod = as.numeric(afreq %*% mutmat)
   tol = sqrt(.Machine$double.eps)
   all(abs(as.numeric(afreq) - prod) < tol)
@@ -42,7 +52,16 @@ isStationary = function(mutmat, afreq) {
 
 #' @rdname model_properties
 #' @export
-isReversible = function(mutmat, afreq) {
+isReversible = function(mutmat, afreq = NULL) {
+  if(isMutationModel(mutmat)) {
+    isRevF = isReversible(mutmat$female, afreq = afreq)
+    isRevM = sexEqual(mutmat) || isReversible(mutmat$male, afreq = afreq)
+    return(isRevF && isRevM)
+  }
+
+  if(is.null(afreq))
+    afreq = attr(mutmat, "afreq") %||% stop2("Argument `afreq` is missing")
+
   pm = afreq * mutmat
   pmT = t.default(pm)
   tol = sqrt(.Machine$double.eps)
@@ -51,7 +70,7 @@ isReversible = function(mutmat, afreq) {
 
 #' @rdname model_properties
 #' @export
-isLumpable = function(mutmat, lump) {  # TODO: Make S3 methods
+isLumpable = function(mutmat, lump) {
   if(isMutationModel(mutmat)) {
 
     if(isTRUE(attr(mutmat, 'alwaysLumpable')))
@@ -63,34 +82,109 @@ isLumpable = function(mutmat, lump) {  # TODO: Make S3 methods
     return(test)
   }
 
-  alleles = colnames(mutmat)
-  if(!all(lump %in% alleles))
-    stop2("Alleles not found in mutation matrix: ", setdiff(lump, alleles))
+  als = colnames(mutmat)
+  lump = prepLump(lump, als)
+  N = length(lump)
+  tol = sqrt(.Machine$double.eps)
 
-  if(dup <- anyDuplicated(lump))
-    stop2("Duplicated entry in `lump`: ", lump[dup])
-
-  if(length(lump) == length(alleles))
+  if(N == 0)
     return(TRUE)
 
-  y = mutmat[lump, .mysetdiff(alleles, lump), drop = FALSE]
+  if(N == 1) {
+    lump = lump[[1]]
 
-  tol = sqrt(.Machine$double.eps)
-  all(abs(as.numeric(y) - rep(y[1, ], each = length(lump))) < tol)
+    # Exhaustive lump (trivial)
+    if(length(lump) == length(als))
+      return(TRUE)
+
+    # Row sum criterion (reduced to equalities of entries)
+    y = mutmat[lump, .mysetdiff(als, lump), drop = FALSE]
+    checks = abs(as.numeric(y) - rep(y[1, ], each = length(lump))) < tol
+    return(all(checks))
+  }
+
+  ### Multiple lumps (of size > 1) ###
+
+  # Alleles not involved in lumps
+  singles = .mysetdiff(als, unlist(lump, use.names = FALSE))
+
+  # Loop through all lumps
+  for(i in seq_len(N)) {
+    a = lump[[i]]
+
+    # Check against singles
+    y = mutmat[a, singles, drop = FALSE]
+    checks = abs(as.numeric(y) - rep(y[1, ], each = length(a))) < tol
+    if(!all(checks))
+      return(FALSE)
+
+    # Check row sums against other lumps
+    for(b in lump[-i]) {
+      z = mutmat[a, b, drop = FALSE]
+      rs = .rowSums(z, length(a), length(b))
+      if(!.equalNums(rs, tol))
+        return(FALSE)
+    }
+  }
+
+  return(TRUE)
 }
 
 #' @rdname model_properties
 #' @export
 alwaysLumpable = function(mutmat) {
+  if(isMutationModel(mutmat)) {
+    alwaysF = alwaysLumpable(mutmat$female)
+    return(alwaysF && (sexEqual(mutmat) || alwaysLumpable(mutmat$male)))
+  }
+
   N = dim(mutmat)[1L]
-  if(N == 1)
-    return(FALSE)
+
+  # 2*2 trivially lumpable
+  if(N <= 2)
+    return(TRUE)
 
   offdiag = mutmat[col(mutmat) != row(mutmat)]
   dim(offdiag) = c(N - 1, N)
 
   # Kemeny & Snell criterion
-
-  all(abs(as.numeric(offdiag) - rep(offdiag[1,], each = N-1)) < sqrt(.Machine$double.eps))
+  tol = sqrt(.Machine$double.eps)
+  all(abs(as.numeric(offdiag) - rep(offdiag[1,], each = N-1)) < tol)
 }
 
+
+#' Find the stationary frequency distribution
+#'
+#' Finds the stationary distribution of allele frequencies, if it exists, w.r.t. a given mutation matrix.
+#' @param mutmat A mutation matrix.
+#'
+#' @return A vector of length `ncol(mutmat)`, or NULL.
+#'
+#' @examples
+#'
+#' m1 = mutationMatrix("equal", alleles = 1:4, rate = 0.1)
+#' findStationary(m1)
+#'
+#' m2 = mutationMatrix("random", alleles = 1:3, seed = 123)
+#' a = findStationary(m2)
+#'
+#' a %*% m2 - a  # check
+#'
+#' @export
+findStationary = function(mutmat) {
+  validateMutationMatrix(mutmat)
+  n = dim(mutmat)[1L]
+  P = diag(n) - mutmat
+  A = rbind(t.default(P), rep(1, n))
+  b = c(rep(0, n), 1)
+
+  # The following is effectively `qr.solve(A, b)`, but catches singular A gracefully
+  QR = qr.default(A)
+
+  if(QR$rank != n) {
+    message("No stationary distribution")
+    return()
+  }
+
+  qr.coef(QR, b)
+}
