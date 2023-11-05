@@ -158,12 +158,15 @@ mutationMatrix = function(model = c("custom", "equal", "proportional",
     mutmat[] = diag(nall)
   }
   else if (model == "stepwise") {
-    alsNum = suppressWarnings(as.numeric(alleles))
+    alsNum = suppressWarnings(round(as.numeric(alleles), 2))
     if (any(is.na(alsNum)))
       stop2("The `stepwise` mutation model requires all alleles to have numerical names")
     if (any(round(alsNum, 1) != alsNum))
       stop2("Microvariants must be named as a decimal number with one decimal")
-    microgroup = (alsNum - round(alsNum))*10
+
+    # Bug fix: round these!
+    microgroup = round((alsNum - round(alsNum))*10)
+
     for (i in 1:nall) {
       microcompats = (microgroup == microgroup[i])
       for (j in 1:nall) {
@@ -276,7 +279,6 @@ validateMutationMatrix = function(mutmat, alleles = NULL) {
 #' @export
 print.mutationMatrix = function(x, includeMatrix = TRUE, includeAttrs = TRUE,
                                 includeProperties = TRUE, ...) {
-
   if(includeMatrix) {
     print(format(x), quote=FALSE, right=TRUE)
   }
@@ -289,6 +291,8 @@ print.mutationMatrix = function(x, includeMatrix = TRUE, includeAttrs = TRUE,
 
     model = attrs$model
     rate = attrs$rate
+    if(is.null(rate) && !is.null(afreq))
+      rate = mutRate(x, afreq)
     rate2 = attrs$rate2
     range = attrs$range
     seed = attrs$seed
