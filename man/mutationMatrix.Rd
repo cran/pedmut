@@ -6,7 +6,7 @@
 \title{Mutation matrix}
 \usage{
 mutationMatrix(
-  model = c("custom", "equal", "proportional", "random", "onestep", "stepwise",
+  model = c("custom", "dawid", "equal", "proportional", "random", "onestep", "stepwise",
     "trivial"),
   matrix = NULL,
   alleles = NULL,
@@ -14,14 +14,15 @@ mutationMatrix(
   rate = NULL,
   seed = NULL,
   rate2 = NULL,
-  range = NULL
+  range = NULL,
+  transform = NULL
 )
 
 validateMutationMatrix(mutmat, alleles = NULL)
 }
 \arguments{
-\item{model}{A string: either "custom", "equal", "proportional", "random",
-"stepwise" or "onestep".}
+\item{model}{A string: either "custom", "dawid", "equal", "proportional",
+"random", "stepwise" or "onestep".}
 
 \item{matrix}{When \code{model} is "custom", this must be a square matrix with
 nonnegative real entries and row sums equal to 1.}
@@ -42,13 +43,18 @@ on to \code{set.seed()}.}
 alleles and microvariants. Required in the "stepwise" model.}
 
 \item{range}{A positive number. The relative probability of mutating n+1
-steps versus mutating n steps. Required  in the "stepwise" model.}
+steps versus mutating n steps. Required in the "stepwise" and "dawid"
+models. Must be in the interval (0,1) for the "dawid" model.}
+
+\item{transform}{Either NULL (default) or the name of a transformation to be
+applied to the mutation model. See \code{\link[=makeReversible]{makeReversible()}}.}
 
 \item{mutmat}{An object of class \code{mutationMatrix}.}
 }
 \value{
-A square matrix with entries in \verb{[0, 1]}, with the allele labels as
-both colnames and rownames.
+An object of class \code{mutationMatrix}, essentially a square numeric
+matrix with various attributes. The matrix has entries in \verb{[0, 1]} and all
+rows sum to 1. Both colnames and rownames are the allele labels.
 }
 \description{
 Construct mutation matrices for pedigree likelihood computations.
@@ -56,27 +62,37 @@ Construct mutation matrices for pedigree likelihood computations.
 \details{
 Descriptions of the models:
 \itemize{
-\item \code{custom} : Allows any mutation matrix to be provided by the user, in the
+\item \code{custom}: Allows any mutation matrix to be provided by the user, in the
 \code{matrix} parameter.
-\item \code{equal} :  All mutations equally likely; probability \eqn{1-rate} of no
+\item \code{dawid}: A reversible model for integer-valued markers, proposed by Dawid
+et al. (2002).
+\item \code{equal}: All mutations equally likely; probability \eqn{1-rate} of no
 mutation.
-\item \code{proportional} : Mutation probabilities are proportional to the target
+\item \code{proportional}: Mutation probabilities are proportional to the target
 allele frequencies.
-\item \code{random} : This produces a matrix of random numbers, where each row is
-normalised so that it sums to 1.
-\item \code{onestep}: A mutation model for microsatellite markers, allowing mutations
-only to the nearest neighbours in the allelic ladder. For example, '10' may
-mutate to either '9' or '11', unless '10' is the lowest allele, in which case
-'11' is the only option. This model is not applicable to loci with
-non-integral microvariants.
+\item \code{random}: This produces a matrix of random numbers, where each row is
+normalised so that it sums to 1. If \code{rate} (and \code{afreq}) is provided, the
+mutation matrix is conditional on the overall mutation rate.
+\item \code{onestep}: A mutation model for markers with integer alleles, allowing
+mutations only to the nearest neighbours in the allelic ladder. For example,
+'10' may mutate to either '9' or '11', unless '10' is the lowest allele, in
+which case '11' is the only option. This model is not applicable to loci with
+non-integer microvariants.
 \item \code{stepwise}: A common model in forensic genetics, allowing different
-mutation rates between integer alleles (like '16') and non-integer
-"microvariants" like '9.3'). Mutations also depend on the size of the
-mutation if the parameter 'range' differs from 1.
-\item \code{trivial} : The identity matrix; i.e. no mutations are possible.
+mutation rates between integer alleles (like '9') and non-integer
+microvariants (like '9.3'). Mutation rates also depend on step size, as
+controlled by the 'range' parameter.
+\item \code{trivial}: The identity matrix, implying that no mutations are possible.
 }
+
+If \code{transform} is non-NULL, the indicated transformation is applied to the
+matrix before returning. Currently, the available options are 3 different
+transformations to reversibility, basically performed with the call
+\code{makeReversible(m, method = transform, adjust = TRUE)}
 }
 \examples{
-mutationMatrix(alleles = 1:3, model = "equal", rate = 0.05)
+mutationMatrix("equal", alleles = 1:3, rate = 0.05)
+
+mutationMatrix("random", afreq = c(a=0.3, b=0.7), rate = 0.05, seed = 1)
 
 }

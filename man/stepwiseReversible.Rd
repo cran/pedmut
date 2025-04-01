@@ -2,7 +2,7 @@
 % Please edit documentation in R/stepwiseReversible.R
 \name{stepwiseReversible}
 \alias{stepwiseReversible}
-\title{Reversible stepwise mutation model}
+\title{Dawid's reversible stepwise model}
 \usage{
 stepwiseReversible(alleles, afreq, rate, range, maxRateOnly = FALSE)
 }
@@ -28,10 +28,13 @@ input. The latter (UB) is the maximum rate under the additional restraint
 that the model is bounded by \code{afreq}.
 }
 \description{
-A reversible stepwise mutation model is created following the approach of
+#' A reversible stepwise mutation model is created following the approach of
 Dawid et al. (2002).
 }
 \details{
+\strong{NB: This function is deprecated: Use \code{mutationMatrix(model = "dawid", ...)}
+instead.}
+
 For the stepwise reversible model, the mutation rate \eqn{r_{i,j},\,  i\neq
 j} is proportional to the overall mutation rate \eqn{\lambda} for given
 values of the range, the allele frequency \eqn{p_i} and n, the number of
