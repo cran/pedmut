@@ -1,8 +1,8 @@
 #' Transformations to reversibility
 #'
-#' This function implements three methods for transforming a mutation matrix
-#' into a reversible one. All methods are based on Metropolis-Hastings proposal
-#' functions.
+#' This function implements three methods for transforming a mutation model
+#' `(M,p)` into a reversible one, `(R,p)`. All methods are based on Metropolis-
+#' Hastings proposal functions.
 #'
 #' These transformations may also be applied through the `transform` argument of
 #' [mutationMatrix()] and [mutationModel()].
@@ -15,15 +15,16 @@
 #' @param adjust Logical. If TRUE (default), the overall mutation rate is
 #'   adjusted to preserve the original rate; see [adjustRate()]. Not relevant
 #'   for method "PR", which by construction always preserves the overall rate.
+#'
 #' @returns A reversible mutation matrix with the same allele frequencies.
 #'
 #' @examples
 #' m = mutationMatrix("equal", afreq = c(a=0.2, b=0.3, c=0.5), rate = 0.2)
-#' makeReversible(m)
-#' makeReversible(m, adjust = FALSE)  # rate differs!
-#'
+#' makeReversible(m, "BA")
 #' makeReversible(m, "MH")
-#' # makeReversible(m, "PR") # not well-defined
+#' makeReversible(m, "PR")
+#'
+#' makeReversible(m, "BA", adjust = FALSE)  # rate differs!
 #'
 #' # Apply to full model with different female/male rates
 #' mod = mutationModel("equal", afreq = c(a=0.2, b=0.3, c=0.5),
@@ -34,10 +35,8 @@
 makeReversible = function(mutmat, method = c("BA", "MH", "PR"), adjust = TRUE,
                           afreq = NULL) {
 
-  if(isMutationModel(mutmat)) {
-    r = .makeRevModel(mutmat, method = method, adjust = adjust, afreq = afreq)
-    return(r)
-  }
+  if(isMutationModel(mutmat))
+    return(mapFullModel(mutmat, makeReversible, method = method, adjust = adjust, afreq = afreq))
 
   method = match.arg(method)
   afreq = afreq %||% attr(mutmat, "afreq") %||% stop2("`afreq` must be provided")
@@ -58,7 +57,7 @@ makeReversible = function(mutmat, method = c("BA", "MH", "PR"), adjust = TRUE,
     },
     PR = {
       # Check if the model is well-defined (formula from paper)
-      if(any(rowSums(pm) > afreq * (1 + diag(M))))
+      if(any(colSums(pm) > afreq * (1 + 2*diag(M))))
         stop2("The PR transformation is not well-defined for this model")
       R = (pm + pmT)/(2*afreq)
     }
@@ -84,19 +83,3 @@ makeReversible = function(mutmat, method = c("BA", "MH", "PR"), adjust = TRUE,
   newMutationMatrix(R, "custom", afreq = afreq, rate = newrate)
 }
 
-
-
-# Extend `makeReversible()` to full models --------------------------------
-
-.makeRevModel = function(mutmod, ...) {
-  revF = makeReversible(mutmod$female, ...)
-
-  sexeq = sexEqual(mutmod)
-  revM = if(sexeq) revF else makeReversible(mutmod$male, ...)
-
-  lumpable = alwaysLumpable(revF) && (sexeq || alwaysLumpable(revM))
-
-  # Return model object
-  structure(list(female = revF, male = revM), sexEqual = sexeq,
-            alwaysLumpable = lumpable, class = "mutationModel")
-}

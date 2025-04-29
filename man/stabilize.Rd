@@ -9,7 +9,7 @@ stabilize(mutmat, afreq = NULL, method = "PM", details = FALSE)
 \arguments{
 \item{mutmat}{A mutation matrix.}
 
-\item{afreq}{A vector of allele frequencies}
+\item{afreq}{A vector of allele frequencies.}
 
 \item{method}{Either "DP", "RM" or "PM". Currently only "PM" is implemented.}
 
@@ -20,10 +20,10 @@ An object of the same class the input \code{mutmat}; either a matrix, a
 \code{mutationMatrix} or a \code{mutationModel}.
 }
 \description{
-Produces a mutation matrix close to the input \code{mutmat}, for which the given
-frequency vector is the stationary distribution. Several methods for doing
-this are described by Simonsson and Mostad (2016); only the "PM" method is
-included here.
+NB: REPLACED BY \link{makeStationary}. Produces a mutation matrix close to the
+input \code{mutmat}, for which the given frequency vector is the stationary
+distribution. Several methods for doing this are described by Simonsson and
+Mostad (2016); only the "PM" method is included here.
 }
 \details{
 This function is based on, and reuses code from, the \code{stabilize()} method of
@@ -31,11 +31,11 @@ the Familias R package.
 }
 \examples{
 
-afreq = c(.2, .3, .5)
-m = mutationMatrix("stepwise", alleles = 1:3, afreq = afreq,
+afreq = c(`1` = .2, `2` = .3, `3` = .5)
+m = mutationMatrix("stepwise", afreq = afreq,
                    rate = 0.1, rate2 = 0.01, range = 0.1)
 m
-stabilize(m, afreq = c(.3,.3,.4))
+stabilize(m)
 
 
 ### Example with full model (i.e., male and female)

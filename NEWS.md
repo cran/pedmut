@@ -1,3 +1,22 @@
+# pedmut 0.9.0
+
+## New features
+
+* New function `lumpMutSpecial()` implementing special lumping of mutation models. Only some cases are implemented so far, more may be added in the future.
+
+* `mutationMatrix()` gains argument `validate`.
+
+* New function `makeStationary()` replaces the previous `stabilize()` for PM-transformation to stationarity.
+
+* As a shortcut for `makeStationary()`, the PM transformation may also be applied directly with `mutationMatrix(..., transform = "PM")` or `mutationModel(..., transform = "PM")`.
+
+## Bug fixes
+
+* Fixed a bug in `makeReversible(..., method = "PR")` failing to catch non-reversible inputs.
+
+* Various minor fixes and code simplifications.
+
+
 # pedmut 0.8.0
 
 ## New features

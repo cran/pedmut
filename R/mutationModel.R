@@ -4,22 +4,17 @@
 #' essentially a list of two mutation matrices, named "female" and "male".
 #'
 #' @param model Either:
-#'
 #'   * a `mutationModel` object (returned unchanged after validation)
-#'
 #'   * a single `mutationMatrix` object (will be applied to both genders)
-#'
 #'   * a list of two `mutationMatrix` objects, named "female" and "male"
-#'
 #'   * a single model name (see [mutationMatrix()] for valid options)
-#'
 #'   * a list of two model names, named "female" and "male"
 #'
 #' @param alleles A character vector with allele labels; passed on to
 #'   [mutationMatrix()].
 #' @param afreq A numeric vector of allele frequencies; passed on to
 #'   [mutationMatrix()].
-#' @param matrix A matrix, or a list of two (named "female" and "male")
+#' @param matrix A matrix, or a list of two matrices (named "female" and "male")
 #' @param rate A numeric mutation rate, or a list of two (named "female" and
 #'   "male")
 #' @param rate2 A numeric mutation rate, or a list of two (named "female" and
@@ -28,8 +23,8 @@
 #' @param range A positive number, or a list of two (named "female" and "male").
 #'   Required in the "stepwise" model; see [mutationMatrix()] for details.
 #' @param seed An integer, or a list of two (named "female" and "male").
-#' @param transform Either NULL (default) or the name of a transformation to be
-#'   applied to the mutation model. See [makeReversible()].
+#' @param transform Either NULL (default) or one of the strings "MH", "BA",
+#'   "PR", "PM". See [mutationMatrix()].
 #' @param validate A logical, by default TRUE.
 #' @param mutmod A `mutationModel` object.
 #'
@@ -37,10 +32,9 @@
 #'   `mutationMatrix` objects, named "female" and "male", and the following
 #'   attributes:
 #'
-#'   * `sexEqual` : TRUE if both genders have identical models, otherwise FALSE
-#'
-#'   * `alwaysLumpable` : TRUE if both genders have models that are lumpable for
-#'   any allele subset, otherwise FALSE
+#'   * `sexEqual`: TRUE if both genders have identical models.
+#'   * `alwaysLumpable`: TRUE if both genders have models that are lumpable for
+#'   any allele subset.
 #'
 #' @examples
 #' # "Equal" model, same parameters for both genders
@@ -63,7 +57,7 @@
 #'
 #' stopifnot(identical(M3, M4))
 #'
-#' # The latter strategy is needed e.g. in pedtools::marker(), which gives the
+#' # The latter strategy is needed e.g. in `pedtools::marker()`, which gives the
 #' # user access to `model`, but not `matrix`.
 #'
 #' @export
@@ -118,8 +112,11 @@ mutationModel = function(model, alleles = NULL, afreq = NULL, matrix = NULL,
 
   sexEqual = identical(mod$female, mod$male)
   lumpable = alwaysLumpable(mod$female) && (sexEqual || alwaysLumpable(mod$male))
+  afreq = attr(mod$female, "afreq")
 
-  mutmod = structure(mod, sexEqual = sexEqual, alwaysLumpable = lumpable,
+  mutmod = structure(mod, afreq = afreq,
+                     sexEqual = sexEqual,
+                     alwaysLumpable = lumpable,
                      class = "mutationModel")
 
   if(validate)
@@ -257,9 +254,31 @@ enforceAlleleOrder = function(m, alleles) {
   new_m
 }
 
-
 #' @rdname mutationModel
 #' @export
 sexEqual = function(mutmod) {
   isTRUE(attr(mutmod, "sexEqual"))
+}
+
+# Utility for applying a function to both female/male parts of a full model
+mapFullModel = function(mutmod, fn, ...) {
+
+  if(!inherits(mutmod, "mutationModel"))
+    stop2(sprintf("Expected the input to be a `mutationModel`, but got a: `%s`", class(mutmod)[1]))
+
+  # Apply fn() to female
+  outF    = fn(mutmod$female, ...)
+  sexeq   = sexEqual(mutmod)
+
+  # If sexes equal reuse, otherwise apply fn() to male
+  outM    = if (sexeq) outF else fn(mutmod$male, ...)
+  lumpable = alwaysLumpable(outF) && (sexeq || alwaysLumpable(outM))
+
+  structure(
+    list(female = outF, male = outM),
+    afreq          = attr(outF, "afreq"),
+    sexEqual       = sexeq,
+    alwaysLumpable = lumpable,
+    class          = "mutationModel"
+  )
 }

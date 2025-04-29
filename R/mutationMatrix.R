@@ -22,24 +22,25 @@
 #'
 #' * `onestep`: A mutation model for markers with integer alleles, allowing
 #' mutations only to the nearest neighbours in the allelic ladder. For example,
-#' '10' may mutate to either '9' or '11', unless '10' is the lowest allele, in
-#' which case '11' is the only option. This model is not applicable to loci with
+#' `10` may mutate to either `9` or `11`, unless `10` is the lowest allele, in
+#' which case `11` is the only option. This model is not applicable to loci with
 #' non-integer microvariants.
 #'
 #' * `stepwise`: A common model in forensic genetics, allowing different
-#' mutation rates between integer alleles (like '9') and non-integer
-#' microvariants (like '9.3'). Mutation rates also depend on step size, as
-#' controlled by the 'range' parameter.
+#' mutation rates between integer alleles (like `9`) and non-integer
+#' microvariants (like `9.3`). Mutation rates also depend on step size, as
+#' controlled by the `range` parameter.
 #'
 #' * `trivial`: The identity matrix, implying that no mutations are possible.
 #'
 #' If `transform` is non-NULL, the indicated transformation is applied to the
-#' matrix before returning. Currently, the available options are 3 different
-#' transformations to reversibility, basically performed with the call
-#' `makeReversible(m, method = transform, adjust = TRUE)`
-
+#' matrix before returning. Currently, there are 4 available options:
+#'
+#' * `MH`, `BA`, `PR`: See [makeReversible()]
+#' * `PM`: See [makeStationary()]
+#'
 #' @param model A string: either "custom", "dawid", "equal", "proportional",
-#'   "random", "stepwise" or "onestep".
+#'   "random", "onestep", "stepwise" or "trivial".
 #' @param matrix When `model` is "custom", this must be a square matrix with
 #'   nonnegative real entries and row sums equal to 1.
 #' @param alleles A character vector (or coercible to character) with allele
@@ -55,13 +56,15 @@
 #' @param range A positive number. The relative probability of mutating n+1
 #'   steps versus mutating n steps. Required in the "stepwise" and "dawid"
 #'   models. Must be in the interval (0,1) for the "dawid" model.
-#' @param transform Either NULL (default) or the name of a transformation to be
-#'   applied to the mutation model. See [makeReversible()].
+#' @param transform Either NULL (default) or one of the strings "MH", "BA",
+#'   "PR", "PM". See Details.
+#' @param validate A logical (default: TRUE) indicating whether to validate
+#'   custom models.
 #' @param mutmat An object of class `mutationMatrix`.
 #'
 #' @return An object of class `mutationMatrix`, essentially a square numeric
 #'   matrix with various attributes. The matrix has entries in `[0, 1]` and all
-#'   rows sum to 1. Both colnames and rownames are the allele labels.
+#'   rows sum to 1. Both row names and column names are the allele labels.
 #'
 #' @examples
 #' mutationMatrix("equal", alleles = 1:3, rate = 0.05)
@@ -74,7 +77,7 @@ mutationMatrix = function(model = c("custom", "dawid", "equal", "proportional",
                                     "random", "onestep", "stepwise", "trivial"),
                           matrix = NULL, alleles = NULL, afreq = NULL,
                           rate = NULL, seed = NULL, rate2 = NULL, range = NULL,
-                          transform = NULL) {
+                          transform = NULL, validate = TRUE) {
 
   model = match.arg(model)
   alleles = if(!is.null(alleles)) as.character(alleles) else names(afreq)
@@ -87,7 +90,7 @@ mutationMatrix = function(model = c("custom", "dawid", "equal", "proportional",
     stop2(sprintf("`matrix` cannot be used with the `%s` model", model))
 
   mutmat = switch(model,
-    custom = .custom(matrix, alleles) |> validateMutationMatrix(),
+    custom = .custom(matrix, alleles, validate = validate),
     dawid = .dawid(alleles, afreq, rate, range),
     equal = .equal(alleles, rate),
     proportional = .proportional(alleles, afreq, rate),
@@ -100,8 +103,12 @@ mutationMatrix = function(model = c("custom", "dawid", "equal", "proportional",
   res = newMutationMatrix(mutmat, model = model, afreq = afreq, rate = rate,
                           rate2 = rate2, range = range, seed = seed)
 
-  if(!is.null(transform))
-    res = makeReversible(res, method = transform, adjust = TRUE, afreq = afreq)
+  if(!is.null(transform)) {
+    if(transform == "PM")
+      res = makeStationary(res, afreq = afreq)
+    else
+      res = makeReversible(res, method = transform, adjust = TRUE, afreq = afreq)
+  }
 
   res
 }
@@ -230,7 +237,8 @@ toString.mutationMatrix = function(x, ...) {
   param = switch(mod,
                  equal =, proportional =, onestep = paste("rate =", attrs$rate),
                  random = paste("seed =", attrs$seed %||% "NULL"),
-                 stepwise = sprintf("rate = %g, rate2 = %g, range = %g", attrs$rate, attrs$rate2, attrs$range),
+                 stepwise = sprintf("rate = %g, rate2 = %g, range = %g",
+                                    attrs$rate, attrs$rate2, attrs$range),
                  NULL)
   if(!is.null(param))
     mod = sprintf("%s, %s", mod, param)
@@ -442,7 +450,7 @@ toString.mutationMatrix = function(x, ...) {
   R
 }
 
-.custom = function(matrix, alleles) {
+.custom = function(matrix, alleles, validate = TRUE) {
   checkNullArg(matrix, "custom")
 
   if(!is.matrix(matrix))
@@ -472,7 +480,7 @@ toString.mutationMatrix = function(x, ...) {
   else if(is.null(dmn) && nullAls)
     stop2("When custom matrix lacks names, the argument `alleles` cannot be NULL")
 
-  matrix
+  if(validate) validateMutationMatrix(matrix) else matrix
 }
 
 

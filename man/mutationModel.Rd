@@ -39,7 +39,7 @@ sexEqual(mutmod)
 \item{afreq}{A numeric vector of allele frequencies; passed on to
 \code{\link[=mutationMatrix]{mutationMatrix()}}.}
 
-\item{matrix}{A matrix, or a list of two (named "female" and "male")}
+\item{matrix}{A matrix, or a list of two matrices (named "female" and "male")}
 
 \item{rate}{A numeric mutation rate, or a list of two (named "female" and
 "male")}
@@ -53,8 +53,8 @@ Required in the "stepwise" model; see \code{\link[=mutationMatrix]{mutationMatri
 
 \item{seed}{An integer, or a list of two (named "female" and "male").}
 
-\item{transform}{Either NULL (default) or the name of a transformation to be
-applied to the mutation model. See \code{\link[=makeReversible]{makeReversible()}}.}
+\item{transform}{Either NULL (default) or one of the strings "MH", "BA",
+"PR", "PM". See \code{\link[=mutationMatrix]{mutationMatrix()}}.}
 
 \item{validate}{A logical, by default TRUE.}
 
@@ -65,9 +65,9 @@ An object of class \code{mutationModel}. This is a list of two
 \code{mutationMatrix} objects, named "female" and "male", and the following
 attributes:
 \itemize{
-\item \code{sexEqual} : TRUE if both genders have identical models, otherwise FALSE
-\item \code{alwaysLumpable} : TRUE if both genders have models that are lumpable for
-any allele subset, otherwise FALSE
+\item \code{sexEqual}: TRUE if both genders have identical models.
+\item \code{alwaysLumpable}: TRUE if both genders have models that are lumpable for
+any allele subset.
 }
 }
 \description{
@@ -95,7 +95,7 @@ M4 = mutationModel(model = mutationMatrix("custom", matrix = mat))
 
 stopifnot(identical(M3, M4))
 
-# The latter strategy is needed e.g. in pedtools::marker(), which gives the
+# The latter strategy is needed e.g. in `pedtools::marker()`, which gives the
 # user access to `model`, but not `matrix`.
 
 }

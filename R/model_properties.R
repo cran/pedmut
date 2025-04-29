@@ -1,11 +1,18 @@
 #' Mutation model properties
 #'
-#' Functions for checking various properties of a mutation model, including
+#' Functions that check various properties of a mutation model, including
 #' stationarity, reversibility and lumpability.
 #'
 #' The function `isBounded()` checks that a mutation model is *bounded* by the
 #' allele frequencies, i.e., that `mutmat[i,j] <= afreq[j]` whenever `i` is not
 #' equal to `j`.
+#'
+#' Lumpability is a property of a mutation model that allows aggregating alleles
+#' into groups, or *lumps*, without changing the overall mutation process. The
+#' functions `isLumpable()` and `alwaysLumpable()` checks lumpability using the
+#' row-sum criterion given by Kemeny & Snell (1976). Note that lumping may be
+#' possible even if the model is not generally lumpable; see [lumpMutSpecial()]
+#' for details.
 #'
 #' For each of these functions, if `mutmat` is a `mutationModel` object, i.e.,
 #' with male and female components, the output is TRUE if and only if both
@@ -14,10 +21,12 @@
 #' @param mutmat A [mutationMatrix()] or a [mutationModel()].
 #' @param afreq A vector with allele frequencies, of the same length as the size
 #'   of `mutmat`.
-#' @param lump A nonempty subset of the colnames of `mutmat` (i.e. the allele
-#'   labels).
+#' @param lump A character vector containing a nonempty set of allele labels.
 #'
 #' @return Each of these functions returns TRUE of FALSE.
+#'
+#' @references
+#' Kemeny & Snell (1976). \emph{Finite Markov Chains}. Springer.
 #'
 #' @examples
 #'
@@ -101,6 +110,7 @@ isBounded = function(mutmat, afreq = NULL) {
 #' @rdname model_properties
 #' @export
 isLumpable = function(mutmat, lump) {
+
   if(isMutationModel(mutmat)) {
 
     if(isTRUE(attr(mutmat, 'alwaysLumpable')))
@@ -109,16 +119,21 @@ isLumpable = function(mutmat, lump) {
     test = isLumpable(mutmat$female, lump)
     if(!sexEqual(mutmat))
       test = test || isLumpable(mutmat$male, lump)
+
     return(test)
   }
+
+  if(is.null(mutmat))
+    return(TRUE)
 
   als = colnames(mutmat)
   lump = prepLump(lump, als)
   N = length(lump)
-  tol = sqrt(.Machine$double.eps)
 
   if(N == 0)
     return(TRUE)
+
+  tol = sqrt(.Machine$double.eps)
 
   if(N == 1) {
     lump = lump[[1]]
@@ -163,14 +178,15 @@ isLumpable = function(mutmat, lump) {
 #' @rdname model_properties
 #' @export
 alwaysLumpable = function(mutmat) {
+
   if(isMutationModel(mutmat)) {
     alwaysF = alwaysLumpable(mutmat$female)
     return(alwaysF && (sexEqual(mutmat) || alwaysLumpable(mutmat$male)))
   }
 
-  N = dim(mutmat)[1L]
+  N = dim(mutmat)[1L] %||% 0L  # allows NULL input
 
-  # 2*2 trivially lumpable
+  # 2*2 and smaller: trivially lumpable
   if(N <= 2)
     return(TRUE)
 
